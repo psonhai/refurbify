@@ -58,6 +58,12 @@
             }
           }
 
+    - name: Trigger Firefox default browser prompt
+      ansible.windows.win_shell: |
+        Start-Process "C:\Program Files\Mozilla Firefox\firefox.exe" -ArgumentList "-setDefaultBrowser" -WindowStyle Hidden
+      args:
+        executable: powershell.exe
+
     - name: Check if Firefox exists in Program Files
       win_shell: |
         if (Test-Path "C:\Program Files\Mozilla Firefox\firefox.exe") {
