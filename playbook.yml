@@ -1,0 +1,103 @@
+- name: Install Chocolatey on Windows
+  hosts: windows
+  gather_facts: yes
+  tasks:
+    - name: Ensure PowerShell execution policy allows scripts
+      win_shell: Set-ExecutionPolicy Bypass -Scope Process -Force
+
+    - name: Install Chocolatey
+      win_shell: |
+        Set-ExecutionPolicy Bypass -Scope Process -Force
+        iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+      args:
+        creates: C:\ProgramData\chocolatey\bin\choco.exe
+
+    - name: Verify Chocolatey installation
+      win_command: choco --version
+      register: choco_version
+
+    - name: Display Chocolatey version
+      debug:
+        msg: "Chocolatey version is {{ choco_version.stdout }}"
+
+    - name: Install Firefox using Chocolatey
+      win_chocolatey:
+        name: firefox
+        state: present
+        params: '--install-arguments="INSTALLDIR=C:\Program Files\Mozilla Firefox"'
+
+    - name: Wait until Firefox is installed
+      win_wait_for:
+        path: C:\Program Files\Mozilla Firefox\firefox.exe
+        timeout: 120
+
+    - name: Create Firefox policies folder
+      win_file:
+        path: C:\Program Files\Mozilla Firefox\distribution
+        state: directory
+
+    - name: Set Firefox homepage via policies.json
+      win_copy:
+        dest: C:\Program Files\Mozilla Firefox\distribution\policies.json
+        content: |
+          {
+            "policies": {
+              "Homepage": {
+                "URL": "https://www.deanza.edu",
+                "Locked": false
+              },
+              "Preferences": {
+                "browser.startup.page": 1,
+                "browser.startup.homepage": "https://www.deanza.edu"
+              },
+              "Extensions": {
+                "Install": [
+                  "https://addons.mozilla.org/firefox/downloads/latest/ublock-origin/latest.xpi"
+                ]
+              }
+            }
+          }
+
+    - name: Check if Firefox exists in Program Files
+      win_shell: |
+        if (Test-Path "C:\Program Files\Mozilla Firefox\firefox.exe") {
+          Write-Output "Installed"
+        } else {
+          Write-Output "Not Installed"
+        }
+      register: firefox_check
+
+    - name: Show result
+      debug:
+        msg: "Firefox status: {{ firefox_check.stdout }}"
+
+    - name: Install LibreOffice system-wide
+      win_chocolatey:
+        name: libreoffice
+        state: present
+        install_args: "/S"
+
+    - name: Ensure system-wide LibreOffice registry folder exists
+      win_file:
+        path: C:\Program Files\LibreOffice\share\registry
+        state: directory
+
+    - name: Get all user folders
+      win_shell: |
+        Get-ChildItem C:\Users -Directory | ForEach-Object { $_.Name }
+      register: user_folders
+
+    - name: Ensure destination folder exists on Windows
+      ansible.windows.win_file:
+        path: C:\\Users\\{{ item }}\\AppData\\Roaming\\LibreOffice\\4\\user
+        state: directory
+      loop: "{{ user_folders.stdout_lines }}"
+      ignore_errors: yes
+
+
+    - name: Apply LibreOffice default save format for each user
+      ansible.builtin.copy:
+        src: libreoffice_registrymodifications.xcu
+        dest: "C:\\Users\\{{ item }}\\AppData\\Roaming\\LibreOffice\\4\\user\\registrymodifications.xcu"
+      loop: "{{ user_folders.stdout_lines }}"
+      ignore_errors: yes
