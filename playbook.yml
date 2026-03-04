@@ -1,36 +1,30 @@
-- name: Install Chocolatey on Windows
-  hosts: windows
-  gather_facts: yes
+- name: Install Softwares on Windows
+  hosts: all
+  gather_facts: True
   tasks:
-    - name: Ensure PowerShell execution policy allows scripts
-      win_shell: Set-ExecutionPolicy Bypass -Scope Process -Force
+    - name: Stop Broadcasting from client
+      win_file:
+        path: C:\Windows\Temp\broadcast_received
+        state: touch
 
-    - name: Install Chocolatey
-      win_shell: |
-        Set-ExecutionPolicy Bypass -Scope Process -Force
-        iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-      args:
-        creates: C:\ProgramData\chocolatey\bin\choco.exe
+    - name: Ensure Chocolatey itself is installed, using community repo for the bootstrap
+      win_chocolatey:
+        name: chocolatey
 
-    - name: Verify Chocolatey installation
-      win_command: choco --version
-      register: choco_version
+    - name: Install multiple packages
+      win_chocolatey:
+        name:
+        - libreoffice
+        - zoom
+        - vlc
+        state: present
 
-    - name: Display Chocolatey version
-      debug:
-        msg: "Chocolatey version is {{ choco_version.stdout }}"
-
-    - name: Install Firefox using Chocolatey
+    - name: Update Firefox to the latest version
       win_chocolatey:
         name: firefox
-        state: present
-        params: '--install-arguments="INSTALLDIR=C:\Program Files\Mozilla Firefox"'
+        state: latest
 
-    - name: Wait until Firefox is installed
-      win_wait_for:
-        path: C:\Program Files\Mozilla Firefox\firefox.exe
-        timeout: 120
-
+    # Set up Firefox policies to set homepage and install uBlock Origin extension
     - name: Create Firefox policies folder
       win_file:
         path: C:\Program Files\Mozilla Firefox\distribution
@@ -58,31 +52,30 @@
             }
           }
 
-    - name: Trigger Firefox default browser prompt
-      ansible.windows.win_shell: |
-        Start-Process "C:\Program Files\Mozilla Firefox\firefox.exe" -ArgumentList "-setDefaultBrowser" -WindowStyle Hidden
-      args:
-        executable: powershell.exe
+    # Set up Edge policies to open specific URLs on startup
+    # - name: Ensure Edge policies key exists
+    #   win_regedit:
+    #     path: HKLM:\SOFTWARE\Policies\Microsoft\Edge
+    #     state: present
 
-    - name: Check if Firefox exists in Program Files
-      win_shell: |
-        if (Test-Path "C:\Program Files\Mozilla Firefox\firefox.exe") {
-          Write-Output "Installed"
-        } else {
-          Write-Output "Not Installed"
-        }
-      register: firefox_check
+    # - name: Set Edge to open specific URLs on startup
+    #   win_regedit:
+    #     path: HKLM:\SOFTWARE\Policies\Microsoft\Edge
+    #     name: RestoreOnStartup
+    #     type: dword
+    #     data: 4
 
-    - name: Show result
-      debug:
-        msg: "Firefox status: {{ firefox_check.stdout }}"
+    # - name: Set the startup URLs
+    #   win_regedit:
+    #     path: HKLM:\SOFTWARE\Policies\Microsoft\Edge\RestoreOnStartupURLs
+    #     type: multi_string
+    #     data: "https://deanza.edu/"
 
-    - name: Install LibreOffice system-wide
-      win_chocolatey:
-        name: libreoffice
-        state: present
-        install_args: "/S"
+    # - name: Kill Edge so policy reloads
+    #   win_shell: Stop-Process -Name msedge -Force
+    #   ignore_errors: yes
 
+    # Set up LibreOffice default save format for all users
     - name: Ensure system-wide LibreOffice registry folder exists
       win_file:
         path: C:\Program Files\LibreOffice\share\registry
@@ -100,10 +93,36 @@
       loop: "{{ user_folders.stdout_lines }}"
       ignore_errors: yes
 
-
     - name: Apply LibreOffice default save format for each user
       ansible.builtin.copy:
         src: libreoffice_registrymodifications.xcu
         dest: "C:\\Users\\{{ item }}\\AppData\\Roaming\\LibreOffice\\4\\user\\registrymodifications.xcu"
       loop: "{{ user_folders.stdout_lines }}"
       ignore_errors: yes
+
+    # # Install Drivers and Windows Updates using PSWindowsUpdate module
+    # - name: Install PSWindowsUpdate module
+    #   win_shell: |
+    #     Set-ExecutionPolicy Bypass -Scope Process -Force
+    #     Install-PackageProvider -Name NuGet -Force -Confirm:$false
+    #     Install-Module -Name PSWindowsUpdate -Force -Confirm:$false
+    #     Import-Module PSWindowsUpdate
+    #   args:
+    #     executable: powershell
+
+    # - name: Install all available updates including drivers
+    #   win_shell: |
+    #     Set-ExecutionPolicy Bypass -Scope Process -Force
+    #     Import-Module PSWindowsUpdate
+    #     Get-WindowsUpdate -MicrosoftUpdate -UpdateType Driver
+    #     Install-WindowsUpdate -MicrosoftUpdate -UpdateType Driver -AcceptAll -IgnoreReboot -Confirm:$false
+    #   args:
+    #     executable: powershell
+    #   become: yes
+    #   become_method: runas
+    #   become_user: SYSTEM
+
+    - name: Install all updates and reboot as many times as needed
+      ansible.windows.win_updates:
+        category_names: '*'
+        reboot: false
