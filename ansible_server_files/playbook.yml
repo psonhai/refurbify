@@ -100,6 +100,7 @@
       loop: "{{ user_folders.stdout_lines }}"
       ignore_errors: yes
 
+    # # This works too but it take a long time to run and is less efficient than the below method
     # # Install Drivers and Windows Updates using PSWindowsUpdate module
     # - name: Install PSWindowsUpdate module
     #   win_shell: |
@@ -122,7 +123,13 @@
     #   become_method: runas
     #   become_user: SYSTEM
 
-    - name: Install all updates and reboot as many times as needed
+    - name: Install all available updates including drivers, set a server alive interval during update stage for the ssh connection plugin
       ansible.windows.win_updates:
         category_names: '*'
-        reboot: false
+        reboot: true
+      vars:
+        # This can be set in a few ways, see the ssh connection plugin for more
+        # information. ControlMaster should be disabled to ensure the new timeout
+        # value is applied for this connection instead of through the cached
+        # connection.
+        ansible_ssh_args: -o ControlMaster=no -o ServerAliveInterval=30
