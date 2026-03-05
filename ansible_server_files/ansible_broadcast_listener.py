@@ -47,7 +47,7 @@ def run_ansible(target_host):
         "-i", f"{target_host},",
         "playbook.yml",
         "-u", "Student",
-        "--private-key", "ssh_private_key",
+        "--private-key", "ansible_ssh_key",
         "-e ansible_connection=ssh ansible_shell_type=powershell ansible_shell_executable=powershell.exe ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'",
     ]
 

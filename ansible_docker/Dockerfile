@@ -8,5 +8,3 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /ansible
-
-CMD ["python", "ansible_broadcast_listener.py"]
