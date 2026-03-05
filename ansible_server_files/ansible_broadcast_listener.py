@@ -24,12 +24,19 @@ def udp_listener():
         message = data.decode().strip()
         print(f"Received from {addr}: {message}")
 
-        # IMPORTANT - WORK TO BE DONE: ENSURE THE MESSAGE IS IN RIGHT FORMAT AND VALIDATE IT BEFORE PROCESSING
+        # IMPORTANT: ENSURE THE MESSAGE IS IN RIGHT FORMAT AND VALIDATE IT BEFORE PROCESSING
 
-        if message not in running_hosts:
+        if message not in running_hosts and validate_ip_address(message):
             running_hosts.add(message)
             task_queue.put((message, addr))
 
+def validate_ip_address(message):
+    # Simple IP address validation (basic)
+    try:
+        socket.inet_aton(message)
+        return True
+    except socket.error:
+        return False
 
 def run_ansible(target_host):
     """Execute ansible-playbook for target host."""
@@ -40,13 +47,13 @@ def run_ansible(target_host):
         "-i", f"{target_host},",
         "playbook.yml",
         "-u", "Student",
-        "--private-key", "/home/hai06/.ssh/ansible_ed25519",
+        "--private-key", "ssh_private_key",
         "-e ansible_connection=ssh ansible_shell_type=powershell ansible_shell_executable=powershell.exe ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'",
     ]
 
     cmd_str = " ".join(cmd)
 
-    print(cmd_str)
+    # print(cmd_str)
 
     result = subprocess.run(cmd, capture_output=True, text=True)
 
@@ -82,7 +89,6 @@ def main():
 
         # Block forever
         task_queue.join()
-
 
 if __name__ == "__main__":
     main()
