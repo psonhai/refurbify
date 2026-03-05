@@ -7,6 +7,6 @@ services:
     container_name: ansible-controller
     volumes:
       - ../ansible_server_files:/ansible
-    entrypoint: /bin/bash -c "chmod 600 /ansible/ssh_private_key && python ansible_broadcast_listener.py"
+    entrypoint: /bin/bash -c "chmod 600 /ansible/ansible_ssh_key && python ansible_broadcast_listener.py"
     working_dir: /ansible
     tty: true
