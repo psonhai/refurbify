@@ -1,3 +1,20 @@
+<!--
+###############################################
+# OpenOffice / LibreOffice User Profile & Settings
+#
+# Description:
+# This XML file contains user and application configuration
+# settings for OpenOffice (or LibreOffice)
+#
+# Location: 
+# This file is stored in the user profile folder at
+# %APPDATA%\OpenOffice\4\{user_profile_name}\registrymodifications.xcu
+# 
+# Comments:
+# Replace this file with your configuration file for safety
+###############################################
+-->
+
 <?xml version="1.0" encoding="UTF-8"?>
 <oor:items xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 <item oor:path="/org.openoffice.Office.Calc/Formula/Calculation"><prop oor:name="OpenCLMinimumDataSize" oor:op="fuse"><value>100</value></prop></item>

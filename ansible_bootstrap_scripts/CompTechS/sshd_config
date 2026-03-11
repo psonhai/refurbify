@@ -1,3 +1,24 @@
+#####################################
+# Summary
+#####################################
+# This configuration file defines the system-wide settings for the OpenSSH
+# server (sshd). It configures how remote SSH connections are authenticated
+# and managed.
+#
+# Key behaviors in this configuration:
+# - Root login is allowed only with SSH keys (password login disabled).
+# - Public key authentication is enabled.
+# - Password authentication is disabled to improve security.
+# - Allow 2 tries attempts per connection
+# - Authorized SSH keys are read from ~/.ssh/authorized_keys.
+# - Administrators group uses a centralized authorized keys file located at
+#   %PROGRAMDATA%/ssh/administrators_authorized_keys.
+# - The SFTP subsystem is enabled using sftp-server.exe.
+#
+# Most other options remain commented, meaning the default OpenSSH settings
+# are used.
+#####################################
+
 # This is the sshd server system-wide configuration file.  See
 # sshd_config(5) for more information.
 
@@ -27,7 +48,7 @@
 #LoginGraceTime 2m
 PermitRootLogin prohibit-password
 #StrictModes yes
-#MaxAuthTries 6
+MaxAuthTries 2
 #MaxSessions 10
 
 PubkeyAuthentication yes

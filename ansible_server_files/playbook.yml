@@ -17,12 +17,8 @@
         - libreoffice
         - zoom
         - vlc
+        - firefox
         state: present
-
-    - name: Update Firefox to the latest version
-      win_chocolatey:
-        name: firefox
-        state: latest
 
     # Set up Firefox policies to set homepage and install uBlock Origin extension
     - name: Create Firefox policies folder
@@ -100,29 +96,7 @@
       loop: "{{ user_folders.stdout_lines }}"
       ignore_errors: yes
 
-    # # This works too but it take a long time to run and is less efficient than the below method
-    # # Install Drivers and Windows Updates using PSWindowsUpdate module
-    # - name: Install PSWindowsUpdate module
-    #   win_shell: |
-    #     Set-ExecutionPolicy Bypass -Scope Process -Force
-    #     Install-PackageProvider -Name NuGet -Force -Confirm:$false
-    #     Install-Module -Name PSWindowsUpdate -Force -Confirm:$false
-    #     Import-Module PSWindowsUpdate
-    #   args:
-    #     executable: powershell
-
-    # - name: Install all available updates including drivers
-    #   win_shell: |
-    #     Set-ExecutionPolicy Bypass -Scope Process -Force
-    #     Import-Module PSWindowsUpdate
-    #     Get-WindowsUpdate -MicrosoftUpdate -UpdateType Driver
-    #     Install-WindowsUpdate -MicrosoftUpdate -UpdateType Driver -AcceptAll -IgnoreReboot -Confirm:$false
-    #   args:
-    #     executable: powershell
-    #   become: yes
-    #   become_method: runas
-    #   become_user: SYSTEM
-
+    # Update drivers and windows
     - name: Install all available updates including drivers, set a server alive interval during update stage for the ssh connection plugin
       ansible.windows.win_updates:
         category_names: '*'
