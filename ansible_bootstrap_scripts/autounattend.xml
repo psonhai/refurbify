@@ -211,36 +211,11 @@ Set-StrictMode -Version 'Latest';
 &lt;/WLANProfile&gt;
 		</File>
 		<File path="C:\Windows\Setup\Scripts\unattend-01.ps1">
-$usb = (Get-Volume | Where-Object FileSystemLabel -eq 'ESD-USB').DriveLetter
-msiexec /i "${usb}:\CompTechS\OpenSSH-Win64-v10.0.0.0.msi"
-
-Start-Service sshd;
-Set-Service -Name sshd -StartupType 'Automatic';
-
-if (!(Get-NetFirewallRule -Name "OpenSSH-Server-In-TCP" -ErrorAction SilentlyContinue)) {
-    New-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -DisplayName 'OpenSSH Server' -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
-}
-
-$sshFolder = "C:\ProgramData\ssh"
-if (-Not (Test-Path $sshFolder)) {
-    New-Item -ItemType Directory -Path $sshFolder -Force
-}
-
-$authorizedKeys = "${sshFolder}\administrators_authorized_keys"
-$pubKeyPath = "${usb}:\CompTechS\ansible_ssh_key"
-Get-Content $pubKeyPath | Out-File -FilePath $authorizedKeys -Encoding ascii -Append
-icacls $sshFolder /inheritance:r /grant:r "Student:F" /T
-
-Copy-Item -Path "${usb}:\CompTechS\ansible_ssh_key" -Destination C:\ProgramData\ssh\administrators_authorized_keys -Force
-Copy-Item -Path "${usb}:\CompTechS\sshd_config" -Destination C:\ProgramData\ssh\sshd_config -Force 
-Restart-Service sshd
-
-msiexec /i "${usb}:\CompTechS\FirefoxSetup.msi" /quiet /norestart
-dism /online /Import-DefaultAppAssociations:${usb}:\CompTechS\FirefoxDefaults.xml
+		$usb = (Get-Volume | Where-Object FileSystemLabel -eq 'ESD-USB').DriveLetter
+		powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${usb}:\CompTechS\unattend-01.ps1"
 		</File>
 		<File path="C:\Windows\Setup\Scripts\unattend-02.ps1">
-$usb = (Get-Volume | Where-Object FileSystemLabel -eq 'ESD-USB').DriveLetter
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${usb}:\CompTechS\broadcast_script.ps1"
+		powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\Windows\CompTechS\broadcast_script.ps1"
 		</File>
 		<File path="C:\Windows\Setup\Scripts\Specialize.ps1">
 $scripts = @(
