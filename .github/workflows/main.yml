@@ -17,11 +17,18 @@ jobs:
         run: |
           choco install tailscale -y
 
-      # Refresh environment
-      - name: Refresh PATH
+      - name: Run Tailscale directly
         shell: powershell
         run: |
-          $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine")
+          & "C:\Program Files\Tailscale\tailscale.exe" version
+
+      # Refresh environment
+      - name: Add Tailscale to current PATH
+        shell: powershell
+        run: |
+          $tailscalePath = "C:\Program Files\Tailscale"
+          $env:Path = "$env:Path;$tailscalePath"
+          tailscale version
 
       # Start Tailscale service
       - name: Start Tailscale
