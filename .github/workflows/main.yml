@@ -18,9 +18,11 @@ jobs:
           choco install tailscale -y
 
       # Refresh environment
-      - name: Refresh environment
+      - name: Refresh Chocolatey environment
         shell: powershell
-        run: refreshenv
+        run: |
+          Import-Module "$env:ChocolateyInstall\helpers\chocolateyInstaller.psm1"
+          refreshenv
 
       # Start Tailscale service
       - name: Start Tailscale
