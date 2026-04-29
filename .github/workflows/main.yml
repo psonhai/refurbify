@@ -7,6 +7,8 @@ jobs:
   tailscale:
     runs-on: windows-latest
 
+    environment: dev
+
     steps:
       - name: Download source code
         uses: actions/checkout@v4
