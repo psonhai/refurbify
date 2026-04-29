@@ -4,7 +4,7 @@ services:
     container_name: tailscale-k3s
     hostname: k3s-control-plane
     environment:
-      - TS_AUTHKEY=tskey-auth-kMAG5EsfMQ11CNTRL-uJaxEsgmpUBaAw5DXaKgUBfYVfYRLJuYZ
+      - TS_AUTHKEY
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_USERSPACE=false # False requires privileged/TUN for better performance
     volumes:
