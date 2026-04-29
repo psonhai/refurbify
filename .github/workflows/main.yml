@@ -17,6 +17,11 @@ jobs:
         run: |
           choco install tailscale -y
 
+      # Refresh environment
+      - name: Refresh environment
+        shell: powershell
+        run: refreshenv
+
       # Start Tailscale service
       - name: Start Tailscale
         shell: powershell
