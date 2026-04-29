@@ -1,0 +1,42 @@
+services:
+  ansible:
+    build: ./ansible_controller
+    user: root
+    container_name: ansible_controller
+    volumes:
+      - ./ansible_controller/server_files:/ansible
+    entrypoint: ["/bin/bash", "-c", "tail -f /dev/null"]
+    working_dir: /ansible
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    hostname: rabbitmq
+    ports:
+      - "5672:5672"    # AMQP
+      - "15672:15672"  # Web UI
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  node_tracker: # not scalable at the moment
+    build: ./node_tracker
+    container_name: node_tracker
+    env_file:
+      - .env
+    volumes:
+      - ./node_tracker/node_tracker.py:/node_tracker.py
+    working_dir: /
+    command: ["python", "node_tracker.py"]
+    depends_on:
+      - rabbitmq
+    restart: unless-stopped
+
+
+volumes:
+  rabbitmq_data:
