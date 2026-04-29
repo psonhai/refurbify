@@ -11,6 +11,8 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+.git_backup
+
 # C extensions
 *.so
 
