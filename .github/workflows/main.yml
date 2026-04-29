@@ -1,0 +1,39 @@
+name: Windows Tailscale Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  tailscale:
+    runs-on: windows-latest
+
+    steps:
+      - name: Download source code
+        uses: actions/checkout@v4
+
+      # Install Tailscale
+      - name: Install Tailscale
+        shell: powershell
+        run: |
+          choco install tailscale -y
+
+      # Start Tailscale service
+      - name: Start Tailscale
+        shell: powershell
+        run: |
+          Start-Service Tailscale
+
+      # Authenticate with auth key
+      - name: Connect to Tailscale
+        shell: powershell
+        env:
+          TS_AUTHKEY: ${{ secrets.TS_AUTHKEY_CLIENT }}
+        run: |
+          tailscale up --authkey $env:TS_AUTHKEY --hostname github-win-runner-client
+
+      # Verify connection
+      - name: Check status
+        shell: powershell
+        run: |
+          tailscale status
+          tailscale ip
