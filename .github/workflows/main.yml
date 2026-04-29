@@ -23,12 +23,10 @@ jobs:
           & "C:\Program Files\Tailscale\tailscale.exe" version
 
       # Refresh environment
-      - name: Add Tailscale to current PATH
+      - name: Add Tailscale to PATH
         shell: powershell
         run: |
-          $tailscalePath = "C:\Program Files\Tailscale"
-          $env:Path = "$env:Path;$tailscalePath"
-          tailscale version
+          echo "C:\Program Files\Tailscale" >> $env:GITHUB_PATH
 
       # Start Tailscale service
       - name: Start Tailscale
