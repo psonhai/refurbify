@@ -1,0 +1,41 @@
+services:
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: tailscale-k3s
+    hostname: k3s-control-plane
+    environment:
+      - TS_AUTHKEY=tskey-auth-kMAG5EsfMQ11CNTRL-uJaxEsgmpUBaAw5DXaKgUBfYVfYRLJuYZ
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false # False requires privileged/TUN for better performance
+    volumes:
+      - tailscale-data:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    restart: unless-stopped
+
+  k3s:
+    image: rancher/k3s:v1.29.1-k3s1
+    container_name: k3s-server
+    network_mode: "service:tailscale" 
+    privileged: true
+    environment:
+      - K3S_TOKEN=my-secure-custom-password-123fvxa
+      - K3S_KUBECONFIG_OUTPUT=/output/kubeconfig.yaml
+      - K3S_KUBECONFIG_MODE=644
+    volumes:
+      - ./entrypoint.sh:/entrypoint.sh
+      - k3s-data:/var/lib/rancher/k3s
+      - kubeconfig:/output
+      - ./configs:/var/lib/rancher/k3s/server/manifests/
+      - ../ansible_server_files:/ansible
+      - /images:/images
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    depends_on:
+      - tailscale
+
+volumes:
+  tailscale-data:
+  k3s-data:
+  kubeconfig:

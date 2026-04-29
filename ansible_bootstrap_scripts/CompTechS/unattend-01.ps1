@@ -28,7 +28,15 @@ $usb = (Get-Volume | Where-Object FileSystemLabel -eq 'ESD-USB').DriveLetter
 Copy-Item -Path "${usb}:\CompTechS\" -Destination "C:\Windows\CompTechS" -Recurse -Force
 
 # Install OpenSSH Server
-msiexec /i "C:\Windows\CompTechS\OpenSSH-Win64-v10.0.0.0.msi"
+msiexec /i "C:\Windows\CompTechS\OpenSSH-Win64-v10.0.0.0.msi" /qn
+
+# Install Tailscale
+$msi = Get-ChildItem "C:\Windows\CompTechS\tailscale*.msi" | Select-Object -First 1
+msiexec /i "$($msi.FullName)" /qn
+
+# Add Tailscale Client Key for authentication
+$authkey = (Get-Content "C:\Windows\CompTechS\tailscale_client.key" -Raw).Trim()
+& "C:\Program Files\Tailscale\tailscale.exe" up --authkey $authkey
 
 # Configure Windows Firewall to allow SSH traffic
 if (!(Get-NetFirewallRule -Name "OpenSSH-Server-In-TCP" -ErrorAction SilentlyContinue)) {
@@ -41,7 +49,7 @@ Copy-Item -Path "C:\Windows\CompTechS\ansible_ssh_key.pub" -Destination "C:\Prog
 Copy-Item -Path "C:\Windows\CompTechS\sshd_config" -Destination "C:\ProgramData\ssh\sshd_config" -Force 
 
 # Set permissions for the .ssh directory and its contents
-icacls $sshFolder /inheritance:r /grant:r "Student:F" /T
+icacls "C:\ProgramData\ssh\administrators_authorized_keys" /inheritance:r /grant:r "SYSTEM:(F)" /grant "BUILTIN\Administrators:(F)"
 
 # Start the sshd service and set it to start automatically on boot
 Start-Service sshd;

@@ -3,7 +3,8 @@ inventory.ini
 
 ansible_ssh_key
 ansible_ssh_key.pub
-
+tailscale*
+ansible_kubernetes_control_plane/configs
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
