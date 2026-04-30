@@ -1,3 +1,9 @@
+name: Windows Tailscale Test
+
+on:
+  workflow_dispatch:
+
+jobs:
   server:
     runs-on: ubuntu-latest
 
