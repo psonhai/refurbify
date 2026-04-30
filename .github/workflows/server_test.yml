@@ -1,0 +1,23 @@
+  server:
+    runs-on: ubuntu-latest
+
+    environment: dev
+
+    steps:
+      - name: Download source code
+        uses: actions/checkout@v4
+
+      - name: Install Tailscale
+        run: |
+          curl -fsSL https://tailscale.com/install.sh | sh
+
+      - name: Start Tailscale
+        run: |
+          sudo tailscaled &
+          sleep 5
+          sudo tailscale up --authkey ${{ secrets.TS_AUTHKEY_SERVER }}
+
+      - name: Test connection
+        run: |
+          tailscale ip
+          tailscale status

@@ -68,7 +68,7 @@ jobs:
         run: |
           sudo tailscaled &
           sleep 5
-          sudo tailscale up --authkey ${{ secrets.TS_AUTHKEY_SERVER }}  --hostname github-win-runner-server
+          sudo tailscale up --authkey ${{ secrets.TS_AUTHKEY_SERVER }}
 
       - name: Test connection
         run: |
