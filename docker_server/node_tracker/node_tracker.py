@@ -75,19 +75,18 @@ class NodeTracker:
             headers={"Authorization": f"Bearer {token}"}
         )
         r.raise_for_status()
+        logger.info(r.json())
         return r.json()["devices"]
 
     @staticmethod
     def has_tag(node, tag):
-        return tag in node["tags"]
+        return "tag:{}" .format(tag) in node["tags"]
 
     def handle_node(self, node):
         node_id = node["nodeId"]
 
         if node_id in self.seen:
             return
-
-        self.seen[node_id] = True
 
         event = {
             "nodeId": node.get("nodeId"),
@@ -99,10 +98,12 @@ class NodeTracker:
             "tags": node.get("tags", []),
         }
 
-        if self.has_tag(node, "Client"):
+        if self.has_tag(node, "client") and node.get("connectedToControl", False):
             self.mq.publish(event)
             logger.info("Published event: ", event)
-        else:
+            self.seen[node_id] = True
+        elif self.has_tag(node, "server") and node.get("connectedToControl", False):
+            self.seen[node_id] = True
             logger.info("Detected a server, ignore!")
 
     def run(self):
@@ -139,16 +140,13 @@ class MQ:
                 time.sleep(3)
 
         self.channel = self.conn.channel()
-        self.channel.queue_declare(queue=QUEUE_NAME, durable=True)
+        self.channel.queue_declare(queue=QUEUE_NAME, durable=False)
 
     def publish(self, event: dict):
         self.channel.basic_publish(
             exchange="",
             routing_key=QUEUE_NAME,
             body=json.dumps(event),
-            properties=pika.BasicProperties(
-                delivery_mode=2  # persistent message
-            ),
         )
 
 # ----------------------------

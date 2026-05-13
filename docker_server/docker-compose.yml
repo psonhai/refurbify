@@ -4,9 +4,31 @@ services:
     user: root
     container_name: ansible_controller
     volumes:
-      - ./ansible_controller/server_files:/ansible
-    entrypoint: ["/bin/bash", "-c", "tail -f /dev/null"]
+      - ./ansible_controller:/ansible
+    command: ["python", "controller_worker.py"]
     working_dir: /ansible
+    depends_on:
+      - tailscale
+    network_mode: "service:tailscale"
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: tailscale
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false
+    volumes:
+      - tailscale_data:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    env_file:
+    - .env
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -37,6 +59,6 @@ services:
       - rabbitmq
     restart: unless-stopped
 
-
 volumes:
-  rabbitmq_data:
+  tailscale_data:
+  rabbitmq_data:  
