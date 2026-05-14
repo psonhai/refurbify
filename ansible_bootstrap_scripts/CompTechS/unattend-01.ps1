@@ -27,16 +27,18 @@ $usb = (Get-Volume | Where-Object FileSystemLabel -eq 'ESD-USB').DriveLetter
 # Copy the CompTechS folder from the USB drive to C:\Windows\CompTechS
 Copy-Item -Path "${usb}:\CompTechS\" -Destination "C:\Windows\CompTechS" -Recurse -Force
 
+# Copy the Wifi.xml file to C:\Windows\Setup\Scripts
+Copy-Item -Path "C:\Windows\CompTechS\wifi.xml" -Destination "C:\Windows\Setup\Scripts\Wifi.xml"
+
+# Add the Wi-Fi profile using netsh
+netsh wlan add profile filename="C:\Windows\Setup\Scripts\Wifi.xml" user=all
+
 # Install OpenSSH Server
-msiexec /i "C:\Windows\CompTechS\OpenSSH-Win64-v10.0.0.0.msi" /qn
+Start-Process msiexec.exe -ArgumentList "/i C:\Windows\CompTechS\OpenSSH-Win64-v10.0.0.0.msi /qn" -Wait
 
 # Install Tailscale
-$msi = Get-ChildItem "C:\Windows\CompTechS\tailscale*.msi" | Select-Object -First 1
-msiexec /i "$($msi.FullName)" /qn
-
-# Add Tailscale Client Key for authentication
-$authkey = (Get-Content "C:\Windows\CompTechS\tailscale_client.key" -Raw).Trim()
-& "C:\Program Files\Tailscale\tailscale.exe" up --authkey $authkey
+# $msi = Get-ChildItem "C:\Windows\CompTechS\tailscale*.msi" | Select-Object -First 1
+# Start-Process msiexec.exe -ArgumentList "/i $($msi.FullName) /qn" -Wait
 
 # Configure Windows Firewall to allow SSH traffic
 if (!(Get-NetFirewallRule -Name "OpenSSH-Server-In-TCP" -ErrorAction SilentlyContinue)) {
@@ -45,11 +47,12 @@ if (!(Get-NetFirewallRule -Name "OpenSSH-Server-In-TCP" -ErrorAction SilentlyCon
 
 # Copy the public key and sshd_config to the appropriate locations
 New-Item -ItemType Directory -Path "C:\ProgramData\ssh" -Force
-Copy-Item -Path "C:\Windows\CompTechS\ansible_ssh_key.pub" -Destination "C:\ProgramData\ssh\administrators_authorized_keys" -Force
+Copy-Item -Path "C:\Windows\CompTechS\openssh_key.pub" -Destination "C:\ProgramData\ssh\administrators_authorized_keys" -Force
 Copy-Item -Path "C:\Windows\CompTechS\sshd_config" -Destination "C:\ProgramData\ssh\sshd_config" -Force 
 
 # Set permissions for the .ssh directory and its contents
-icacls "C:\ProgramData\ssh\administrators_authorized_keys" /inheritance:r /grant:r "SYSTEM:(F)" /grant "BUILTIN\Administrators:(F)"
+icacls "C:\ProgramData\ssh\administrators_authorized_keys" /reset
+icacls "C:\ProgramData\ssh\administrators_authorized_keys" /inheritance:r /grant:r "SYSTEM:F" /grant "Administrators:F"
 
 # Start the sshd service and set it to start automatically on boot
 Start-Service sshd;

@@ -27,3 +27,6 @@ jobs:
         run: |
           tailscale ip
           tailscale status
+
+      - name: Read client IP
+        run: echo "Client IP is ${{ needs.client.outputs.client_ip }}"

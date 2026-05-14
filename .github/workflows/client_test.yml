@@ -1,0 +1,112 @@
+name: Client Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  client:
+    runs-on: windows-latest
+
+    environment: dev
+
+    steps:
+      - name: Download source code
+        uses: actions/checkout@v4
+
+      # Install Tailscale
+      - name: Install Tailscale
+        shell: powershell
+        run: |
+          choco install tailscale -y
+
+      - name: Run Tailscale directly
+        shell: powershell
+        run: |
+          & "C:\Program Files\Tailscale\tailscale.exe" version
+
+      # Refresh environment
+      - name: Add Tailscale to PATH
+        shell: powershell
+        run: |
+          echo "C:\Program Files\Tailscale" >> $env:GITHUB_PATH
+
+      # Start Tailscale service
+      - name: Start Tailscale
+        shell: powershell
+        run: |
+          Start-Service Tailscale
+
+      # Authenticate with auth key
+      - name: Connect to Tailscale
+        shell: powershell
+        env:
+          TS_AUTHKEY: ${{ secrets.TS_AUTHKEY_CLIENT }}
+        run: |
+          tailscale up --authkey $env:TS_AUTHKEY --hostname github-win-runner-client
+
+      # Verify connection
+      - name: Check status
+        shell: powershell
+        run: |
+          tailscale status
+          tailscale ip
+
+      # Share Tailscale IP in output for server test
+      - name: Get IP
+        id: ip
+        run: |
+          IP=tailscale ip
+          echo "ip=$IP" >> $GITHUB_OUTPUT
+
+      # Install OpenSSH Server
+      - name: Install OpenSSH Server
+        shell: powershell
+        run: |
+          Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+
+      # Start SSH service
+      - name: Start SSH service
+        shell: powershell
+        run: |
+          Start-Service sshd
+          Set-Service -Name sshd -StartupType Automatic
+
+      # Allow SSH through firewall
+      - name: Allow SSH through firewall
+        shell: powershell
+        run: |
+          New-NetFirewallRule -Name sshd `
+            -DisplayName 'OpenSSH Server (sshd)' `
+            -Enabled True `
+            -Direction Inbound `
+            -Protocol TCP `
+            -Action Allow `
+            -LocalPort 22
+
+      # Set password for current user
+      - name: Set password for current user
+        shell: powershell
+        run: |
+          net user runneradmin "Password123!"
+
+      - name: Wait for ssh connection
+        shell: powershell
+        run: |
+          Write-Host "Waiting for ssh connection..."
+
+          $timeout = 120   # seconds
+          $interval = 1
+          $elapsed = 0
+
+          while ($elapsed -lt $timeout) {
+            if (Test-Path "ready.txt") {
+              Write-Host "File is ready!"
+              exit 0
+            }
+
+            Start-Sleep -Seconds $interval
+            $elapsed += $interval
+          }
+
+          Write-Error "Timeout waiting for file"
+          exit 1

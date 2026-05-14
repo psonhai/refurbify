@@ -6,6 +6,9 @@ ansible_ssh_key.pub
 tailscale*
 ansible_kubernetes_control_plane/configs
 env/
+temp/
+*key*
+wifi.xml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
