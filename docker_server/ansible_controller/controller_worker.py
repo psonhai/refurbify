@@ -42,7 +42,7 @@ class Worker:
             '-i', f'{ip},',
             '--user', 'Student',
             '--private-key', './server_files/openssh_key',
-            '--ssh-extra-args', '-o StrictHostKeyChecking=no',
+            '--ssh-extra-args', '-o StrictHostKeyChecking=no -o ServerAliveInterval=300',
             '-e', 'ansible_connection=ssh ansible_shell_type=powershell ansible_shell_executable=powershell.exe ansible_remote_tmp=/tmp/ansible-tmp',
             '-vvv',
             playbook_path
@@ -54,7 +54,11 @@ class Worker:
 
     def run(self):
         # RabbitMQ connection
-        connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOSTNAME, credentials=pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASS)))
+        connection = pika.BlockingConnection(pika.ConnectionParameters(
+            host=RABBITMQ_HOSTNAME, 
+            credentials=pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASS),
+            heartbeat=300
+            ))
         channel = connection.channel()
         channel.queue_declare(queue=QUEUE_NAME)
         channel.basic_consume(queue=QUEUE_NAME, on_message_callback=self.callback, auto_ack=True)

@@ -74,8 +74,8 @@ class NodeTracker:
             f"https://api.tailscale.com/api/v2/tailnet/{TAILNET}/devices",
             headers={"Authorization": f"Bearer {token}"}
         )
+        logger.info("Fetched...")
         r.raise_for_status()
-        logger.info(r.json())
         return r.json()["devices"]
 
     @staticmethod
@@ -100,7 +100,7 @@ class NodeTracker:
 
         if self.has_tag(node, "client") and node.get("connectedToControl", False):
             self.mq.publish(event)
-            logger.info("Published event: ", event)
+            logger.info("Detected a client, published event: ", event)
             self.seen[node_id] = True
         elif self.has_tag(node, "server") and node.get("connectedToControl", False):
             self.seen[node_id] = True
@@ -115,7 +115,9 @@ class NodeTracker:
                     self.handle_node(node)
 
             except Exception as e:
-                print("Error:", e)
+                logger.error("Error: %s", e)
+                if isinstance(e, pika.exceptions.AMQPError):
+                    self.mq.reconnect()
 
             time.sleep(POLL_INTERVAL)
 
@@ -125,29 +127,48 @@ class NodeTracker:
 
 class MQ:
     def __init__(self):
+        self.reconnect()
+
+    def reconnect(self):
+        if getattr(self, "conn", None):
+            try:
+                self.conn.close()
+            except Exception:
+                pass
+
         while True:
             try:
                 self.conn = pika.BlockingConnection(
                     pika.ConnectionParameters(
                         host=RABBITMQ_HOSTNAME,
                         virtual_host="/",
-                        credentials=pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASS)
+                        credentials=pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASS),
+                        heartbeat=300
                     )
                 )
+                self.channel = self.conn.channel()
+                self.channel.queue_declare(queue=QUEUE_NAME, durable=False)
+                logger.info("Connected to RabbitMQ")
                 break
             except pika.exceptions.AMQPConnectionError:
                 logger.info("Waiting for RabbitMQ...")
                 time.sleep(3)
 
-        self.channel = self.conn.channel()
-        self.channel.queue_declare(queue=QUEUE_NAME, durable=False)
-
     def publish(self, event: dict):
-        self.channel.basic_publish(
-            exchange="",
-            routing_key=QUEUE_NAME,
-            body=json.dumps(event),
-        )
+        try:
+            self.channel.basic_publish(
+                exchange="",
+                routing_key=QUEUE_NAME,
+                body=json.dumps(event),
+            )
+        except pika.exceptions.AMQPError as exc:
+            logger.warning("RabbitMQ publish failed, reconnecting: %s", exc)
+            self.reconnect()
+            self.channel.basic_publish(
+                exchange="",
+                routing_key=QUEUE_NAME,
+                body=json.dumps(event),
+            )
 
 # ----------------------------
 # Main Function

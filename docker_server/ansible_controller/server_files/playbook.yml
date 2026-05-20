@@ -7,23 +7,35 @@
       community.windows.win_lineinfile:
         path: C:\Windows\CompTechS\log.txt
         create: true
-        line: "[{{ ansible_facts.date_time.date }} {{ ansible_facts.date_time.time }}] Ansible Controller Connected, Starting setup"
+        line: "[{{ lookup('pipe', 'date +%Y-%m-%d\\ %H:%M:%S') }}] Ansible Controller Connected, Starting setup"
 
-    # Create edge shortcut with custom URL on desktop for all users
-    - name: Create Microsoft Edge shortcut on desktop with custom URL
-      ansible.windows.win_copy:
-        dest: C:\Users\Public\Desktop\Microsoft Edge.url
-        content: |
-          [InternetShortcut]
-          URL=https://deanza.edu
-          IconFile=C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
-          IconIndex=0
+    # Open Device Manager
+    - name: Open Device Manager
+      community.windows.win_scheduled_task:
+        name: "OpenDeviceManager"
+        actions:
+          - path: devmgmt.msc
+        username: Student
+        run_level: highest
+        triggers:
+        - type: logon
+        state: present
 
-    - name: Append log entry for shortcut creation
-      community.windows.win_lineinfile:
-        path: C:\Windows\CompTechS\log.txt
-        create: true
-        line: "[{{ ansible_facts.date_time.date }} {{ ansible_facts.date_time.time }}] Created new URL shortcut"
+    - name: Run scheduled task immediately
+      ansible.windows.win_shell: schtasks /run /TN "OpenDeviceManager"
+
+    - name: Delete scheduled task via PowerShell
+      ansible.windows.win_shell: |
+        Unregister-ScheduledTask -TaskName "OpenDeviceManager" -Confirm:$false
+
+    # Disable sleep and screen timeout to prevent interruptions during Ansible setup
+    - name: Prevent sleep and screen timeout
+      ansible.windows.win_shell: |
+        powercfg /change standby-timeout-ac 0
+        powercfg /change standby-timeout-dc 0
+        powercfg /change monitor-timeout-ac 0
+        powercfg /change monitor-timeout-dc 0
+        powercfg /hibernate off
 
     # Install multiple packages with Chocolatey
     - name: Install multiple packages
@@ -39,7 +51,7 @@
       community.windows.win_lineinfile:
         path: C:\Windows\CompTechS\log.txt
         create: true
-        line: "[{{ ansible_facts.date_time.date }} {{ ansible_facts.date_time.time }}] Installed packages: LibreOffice, Zoom, VLC, Firefox"
+        line: "[{{ lookup('pipe', 'date +%Y-%m-%d\\ %H:%M:%S') }}] Installed packages: LibreOffice, Zoom, VLC, Firefox"
 
     # Configure Firefox homepage and install uBlock Origin extension via policies.json
     - name: Create Firefox policies folder
@@ -53,10 +65,15 @@
         content: |
           {
             "policies": {
+              "DisableFirefoxAccounts": true,
+              "DontCheckDefaultBrowser": true,
+              "OverrideFirstRunPage": "",
+              "OverridePostUpdatePage": "",
               "Homepage": {
                 "URL": "https://www.deanza.edu",
                 "Locked": false
               },
+              "StartPage": "homepage",
               "Preferences": {
                 "browser.startup.page": 1,
                 "browser.startup.homepage": "https://www.deanza.edu"
@@ -73,54 +90,7 @@
       community.windows.win_lineinfile:
         path: C:\Windows\CompTechS\log.txt
         create: true
-        line: "[{{ ansible_facts.date_time.date }} {{ ansible_facts.date_time.time }}] Set Firefox homepage and installed uBlock Origin extension"
-
-    # Create scheduled task to set default browser to firefox
-    - name: Apply LibreOffice default save format for each user
-      win_copy:
-        src: set_default_browser_script.ps1
-        dest: C:\Windows\CompTechS\set_default_browser_script.ps1
-
-    - name: Run default browser script in user session
-      community.windows.win_scheduled_task:
-        name: SetDefaultBrowser
-        actions:
-          - path: powershell.exe
-            arguments: -ExecutionPolicy Bypass -File C:\Windows\CompTechS\set_default_browser_script.ps1
-        triggers:
-          - type: logon
-        username: Student
-        run_level: highest
-        state: present
-
-    - name: Append log entry for scheduled task creation
-      community.windows.win_lineinfile:
-        path: C:\Windows\CompTechS\log.txt
-        create: true
-        line: "[{{ ansible_facts.date_time.date }} {{ ansible_facts.date_time.time }}] Created scheduled task to set default browser at next logon"
-
-    # Run the scheduled task immediately in the user session to set the default browser without waiting for the next logon
-    - name: Run task immediately in user session
-      ansible.windows.win_shell: |
-        schtasks /run /tn "SetDefaultBrowser"
-
-    - name: Append log entry for scheduled task execution
-      community.windows.win_lineinfile:
-        path: C:\Windows\CompTechS\log.txt
-        create: true
-        line: "[{{ ansible_facts.date_time.date }} {{ ansible_facts.date_time.time }}] Ran scheduled task to set default browser"
-
-    # Delete the scheduled task after execution to clean up
-    - name: Delete scheduled task via PowerShell
-      ansible.windows.win_shell: |
-        Unregister-ScheduledTask -TaskName "SetDefaultBrowser" -Confirm:$false
-
-    - name: Append log entry for scheduled task deletion
-      community.windows.win_lineinfile:
-        path: C:\Windows\CompTechS\log.txt
-        create: true
-        line: "[{{ ansible_facts.date_time.date }} {{ ansible_facts.date_time.time }}] Deleted scheduled task to set default browser"
-
+        line: "[{{ lookup('pipe', 'date +%Y-%m-%d\\ %H:%M:%S') }}] Set Firefox homepage and installed uBlock Origin extension"
 
     # Configure LibreOffice default save format to ms office by copying registrymodifications.xcu to each user's LibreOffice profile folder
     - name: Ensure destination folder exists on Windows
@@ -137,7 +107,7 @@
       community.windows.win_lineinfile:
         path: C:\Windows\CompTechS\log.txt
         create: true
-        line: "[{{ ansible_facts.date_time.date }} {{ ansible_facts.date_time.time }}] Configured LibreOffice default save format"
+        line: "[{{ lookup('pipe', 'date +%Y-%m-%d\\ %H:%M:%S') }}] Configured LibreOffice default save format"
 
     # Install drivers from windows update using PSWindowsUpdate module
     - name: Copy PSWindowsUpdate installation script to Windows
@@ -161,18 +131,22 @@
       community.windows.win_lineinfile:
         path: C:\Windows\CompTechS\log.txt
         create: true
-        line: "[{{ ansible_facts.date_time.date }} {{ ansible_facts.date_time.time }}] Created scheduled task to install driver updates at next logon"
+        line: "[{{ lookup('pipe', 'date +%Y-%m-%d\\ %H:%M:%S') }}] Created scheduled task to install driver updates at next logon"
 
     # Run the scheduled task immediately in the user session to set the default browser without waiting for the next logon
     - name: Run task immediately in user session
       ansible.windows.win_shell: |
         schtasks /run /tn "InstallPSWindowsUpdate"
 
+    - name: Wait for system stabilization
+      ansible.builtin.pause:
+        minutes: 5
+
     - name: Append log entry for scheduled task execution
       community.windows.win_lineinfile:
         path: C:\Windows\CompTechS\log.txt
         create: true
-        line: "[{{ ansible_facts.date_time.date }} {{ ansible_facts.date_time.time }}] Ran scheduled task to install driver updates"
+        line: "[{{ lookup('pipe', 'date +%Y-%m-%d\\ %H:%M:%S') }}] Ran scheduled task to install PSWindowsUpdate"
 
     # Delete the scheduled task after execution to clean up
     - name: Delete scheduled task via PowerShell
@@ -183,7 +157,7 @@
       community.windows.win_lineinfile:
         path: C:\Windows\CompTechS\log.txt
         create: true
-        line: "[{{ ansible_facts.date_time.date }} {{ ansible_facts.date_time.time }}] Deleted scheduled task to install driver updates"
+        line: "[{{ lookup('pipe', 'date +%Y-%m-%d\\ %H:%M:%S') }}] Deleted scheduled task to install PSWindowsUpdate"
 
     # Install drivers from windows update using PSWindowsUpdate module with SYSTEM privileges to ensure all drivers get installed without user context limitations
     - name: Run Windows Update task as SYSTEM
@@ -203,6 +177,10 @@
       ansible.windows.win_shell: 
         schtasks /run /tn DriverUpdateJob
 
+    - name: Wait for system stabilization
+      ansible.builtin.pause:
+        minutes: 10
+
     - name: Delete scheduled task via PowerShell
       ansible.windows.win_shell: |
         Unregister-ScheduledTask -TaskName "DriverUpdateJob" -Confirm:$false
@@ -211,7 +189,7 @@
       community.windows.win_lineinfile:
         path: C:\Windows\CompTechS\log.txt
         create: true
-        line: "[{{ ansible_facts.date_time.date }} {{ ansible_facts.date_time.time }}] Running driver updates"
+        line: "[{{ lookup('pipe', 'date +%Y-%m-%d\\ %H:%M:%S') }}] Running driver updates"
 
     # Create a scheduled task to run the debloat script with admin privileges at next logon, then run it immediately in the SYSTEM context to ensure it executes without user context limitations and applies debloat changes successfully
     - name: Run Windows Update task as SYSTEM
@@ -219,7 +197,8 @@
         name: "RunDebloatAdmin"
         actions:
           - path: powershell.exe
-            arguments: -ExecutionPolicy Bypass -File C:\Windows\CompTechS\Win11Debloat\Win11Debloat.ps1 -RunDefaults -Silent
+            arguments: |
+             -ExecutionPolicy Bypass -File C:\Windows\CompTechS\Win11Debloat\Win11Debloat.ps1 -RunDefaults -Silent -LogPath C:\Users\Student\Desktop\windebloat_log.txt
         username: Student
         run_level: highest
         triggers:
@@ -237,20 +216,67 @@
       community.windows.win_lineinfile:
         path: C:\Windows\CompTechS\log.txt
         create: true
-        line: "[{{ ansible_facts.date_time.date }} {{ ansible_facts.date_time.time }}] Running debloat script"
+        line: "[{{ lookup('pipe', 'date +%Y-%m-%d\\ %H:%M:%S') }}] Running debloat script"
 
-    # End of playbook, add a pause to allow any pending operations to complete before Ansible disconnects
-    - name: Wait for system stabilization
-      ansible.builtin.pause:
-        minutes: 3
+    # Create edge shortcut with custom URL on desktop for all users ## not working at the moment
+    - name: Create Edge shortcut
+      community.windows.win_shortcut:
+        dest: "C:\\Users\\Student\\Desktop\\Microsoft Edge.lnk"
+        src: "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"
+        arguments: "https://deanza.edu"
+        description: "Open website in Edge"
 
-    - name: Append log entry for debloat script execution
+    - name: Append log entry for shortcut creation
       community.windows.win_lineinfile:
         path: C:\Windows\CompTechS\log.txt
         create: true
-        line: "[{{ ansible_facts.date_time.date }} {{ ansible_facts.date_time.time }}] Playbook almost completed, waiting for system stabilization before removing Tailscale and OpenSSH. ***IMPORTANT: Please look for removal logs of Tailscale and OpenSSH in this file to confirm they were uninstalled successfully. If you do not see those logs within 10 minutes, please check if Tailscale and OpenSSH are still installed and uninstall them manually if needed.***"
+        line: "[{{ lookup('pipe', 'date +%Y-%m-%d\\ %H:%M:%S') }}] Created new URL shortcut"
 
-    # remove tailscale and openssh server, check if it's really uninstalled
+    # Create scheduled task to set default browser to firefox
+    - name: Copy default browser script to Windows
+      win_copy:
+        src: set_default_browser_script.ps1
+        dest: C:\Windows\CompTechS\set_default_browser_script.ps1
+        
+    - name: Wait for system stabilization
+      ansible.builtin.pause:
+        minutes: 2
+
+    - name: Run default browser script in user session
+      community.windows.win_scheduled_task:
+        name: SetDefaultBrowser
+        actions:
+          - path: powershell.exe
+            arguments: -ExecutionPolicy Bypass -File C:\Windows\CompTechS\set_default_browser_script.ps1
+        triggers:
+          - type: logon
+        username: Student
+        run_level: highest
+        state: present
+
+    - name: Wait for system stabilization
+      ansible.builtin.pause:
+        minutes: 5
+
+    - name: Run task immediately in user session
+      ansible.windows.win_shell: |
+        schtasks /run /tn "SetDefaultBrowser"
+
+    - name: Delete scheduled task via PowerShell
+      ansible.windows.win_shell: |
+        Unregister-ScheduledTask -TaskName "SetDefaultBrowser" -Confirm:$false
+
+    - name: Append log entry for scheduled task deletion
+      community.windows.win_lineinfile:
+        path: C:\Windows\CompTechS\log.txt
+        create: true
+        line: "[{{ lookup('pipe', 'date +%Y-%m-%d\\ %H:%M:%S') }}] Deleted scheduled task to set default browser"
+
+    - name: Wait for system stabilization
+      ansible.builtin.pause:
+        minutes: 2
+
+    # End of playbook, remove tailscale and openssh server, check if it's really uninstalled
     - name: Copy final uninstallation script to Windows
       win_copy:
         src: uninstall_openssh_tailscale.ps1
@@ -260,7 +286,7 @@
       community.windows.win_lineinfile:
         path: C:\Windows\CompTechS\log.txt
         create: true
-        line: "[{{ ansible_facts.date_time.date }} {{ ansible_facts.date_time.time }}] End of playbook reached, copied uninstallation script to Windows, now running it in user session to remove Tailscale and OpenSSH."
+        line: "[{{ lookup('pipe', 'date +%Y-%m-%d\\ %H:%M:%S') }}] End of playbook reached, copied uninstallation script to Windows, now running it in user session to remove Tailscale and OpenSSH."
         insertafter: EOF
 
     - name: Run uninstallation script in user session
